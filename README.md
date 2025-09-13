@@ -3,6 +3,8 @@ Daily schedule with Google Calendar, visualized using Flask
 
 This python application is designed to work with the [E&S Digistar](https://en.wikipedia.org/wiki/Digistar) interface, but can be easily used independently.
 
+Note that the application uses JavaScript code to highlight past and future events (and for something else), so support for JS is desirable.
+
 ## Dependencies
 
 * [Flask](https://flask.palletsprojects.com/)
