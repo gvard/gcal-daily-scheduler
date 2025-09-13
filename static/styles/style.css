@@ -1,0 +1,43 @@
+body {
+  background: black;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.3em;
+}
+table td.past {
+  background: #222;
+  padding: 15px 20px;
+  color: #666;
+}
+table td.now {
+  background: #222;
+  padding: 20px 20px;
+  color: rgb(204, 168, 97);
+}
+table td.future {
+  background: #222;
+  padding: 20px 20px;
+  color: rgb(124, 101, 55);
+}
+table thead th {
+  text-align: left;
+  top: 0;
+  background-color: #010101;
+  color: #fff;
+  padding: 10px;
+  text-transform: uppercase;
+  font-size: 1.5em;
+  z-index: 5;
+}
+table tbody tr th {
+  text-align: left;
+  left: 0;
+  background-color: #292e3b;
+  color: #bbb;
+  padding: 10px;
+}
+tr th:nth-child(2) {
+  padding-left: 20px;
+}
+a:visited {
+  color: #4a3e95;
+}

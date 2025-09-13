@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <title>Расписание: {{today}} {{gdat}}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/style.css') }}">
+  <meta http-equiv="refresh" content="43200">
+</head>
+<body>
+<table id="schedule">
+<tr>
+  <th><a href="/" title="Получить список мероприятий из Google календаря">Гугл</a>
+    /
+    <a href="/tomorrow/" title="Получить список мероприятий завтрашнего дня">Завтра</a>
+  </th>
+  <th><span id="dayofweek" title="События для {{gdat}}">{{today}}</span>, <span id="curTime" onclick="addClassFromTime()" title="Время обновления. Расписание получено в {{tim}}"></span></th>
+</tr>
+{% for event in data %}<tr>
+  <th>{{event[0]}}</th>
+  <td>{{event[1]}}</td>
+</tr>{% endfor %}
+</table>
+<script>
+function addClassFromTime() {
+  var curTime = new Date();
+  var dateTime = ('0' + curTime.getHours()).slice(-2) + ":" + ('0' + curTime.getMinutes()).slice(-2);
+  document.getElementById("curTime").innerHTML = dateTime;
+  for (let i = 1; i < trs.length; i++) {
+    let th = trs[i].getElementsByTagName("th")[0];
+    let td = trs[i].getElementsByTagName("td")[0];
+    let beg = th.innerText.split("–")[0];
+    let end = th.innerText.split("–")[1];
+    nNow = new Date();
+    nNowDate = nNow.toISOString().split("T")[0];
+    let begTime = new Date(nNowDate + " " + beg);
+    let endTime = new Date(nNowDate + " " + end);
+    let timeNow = nNow;
+    if (timeNow.getTime() > endTime.getTime()) {
+      td.className = "past";
+    } else if (timeNow.getTime() > begTime.getTime() && timeNow.getTime() < endTime.getTime()) {
+      td.className = "now";
+    } else {
+      td.className = "future";
+    }
+  }
+}
+var trs = document.getElementById("schedule").getElementsByTagName("tr");
+addClassFromTime();
+setInterval(function() {
+  addClassFromTime();
+}, 59 * 1000);
+</script>
+</body>
+</html>
