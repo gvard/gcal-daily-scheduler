@@ -9,11 +9,12 @@ Note that the application uses JavaScript code to highlight past and future even
 
 * [Flask](https://flask.palletsprojects.com/)
 * [Google client library](https://github.com/googleapis/google-api-python-client)
+* [pyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI/)
 
 ## Installation
 
 ```bash
-pip install --upgrade Flask google-api-python-client google-auth-httplib2 google-auth-oauthlib
+pip install --upgrade Flask google-api-python-client google-auth-httplib2 google-auth-oauthlib pyTelegramBotAPI
 ```
 
 For the application to work, you need:
@@ -22,6 +23,11 @@ For the application to work, you need:
 * Specify the сalendar ID from the [Google Calendar](https://calendar.google.com/) settings: `cal.py`, `CAL_ID` variable.
 * If necessary, specify the IP address and port in `flask_cal.py`, `HOST` and `PORT` variables.
 * Launch the application from the command line or using a shortcut on the Windows desktop.
+
+Additionally, you can use a Telegram bot for various requests.
+The bot starts and runs simultaneously with the Flask application.
+To use the bot, specify [your token](https://core.telegram.org/bots/tutorial) in `flask_cal.py`, `TG_TOKEN` variable.
+You can disable the bot by setting the `TG_BOT` variable to False.
 
 More information on how to interact with the Google Calendar API can be found at:
 * [Python quickstart guide](https://developers.google.com/workspace/calendar/api/quickstart/python)
