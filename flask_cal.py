@@ -12,6 +12,8 @@ import threading
 
 from flask import Flask, render_template
 from telebot import TeleBot, types
+import vk_api
+from vk_api.longpoll import VkLongPoll, VkEventType
 
 from cal import GoogleCalendar, CAL_ID, TZ_DELTA
 
@@ -19,7 +21,9 @@ from cal import GoogleCalendar, CAL_ID, TZ_DELTA
 app = Flask(__name__)
 
 TG_BOT = True
+VK_BOT = False
 TG_TOKEN = "YOUR_TOKEN_HERE"
+VK_TOKEN = "YOUR_TOKEN_HERE"
 PRINT_MSG = False
 HOST = "127.0.0.1"
 PORT = 5000
@@ -62,8 +66,8 @@ def mk_req(start, end):
 beautify = lambda st: st.strip(".").replace("солнечн", "Солнечн").replace("вселенн", "Вселенн")
 
 
-def get_cal_evnts():
-    yandex_ctime = get_yandex_time()
+def get_cal_evnts(dt=0):
+    yandex_ctime = get_yandex_time() + dt
     time_now = datetime.strptime(ctime(yandex_ctime / 1000), "%c")
     gdate = time_now.date()
     start, end = get_time(time_now, dlt=TZ_DELTA)
@@ -76,9 +80,10 @@ def get_cal_evnts():
             data = [(NOEVENT_MSG)]
         else:
             time_str = get_times(evnt["start"]["dateTime"], evnt["end"]["dateTime"])
-            print(time_str, evnt["summary"])
+            if PRINT_MSG:
+                print(time_str, evnt["summary"])
             data.append((time_str, beautify(evnt["summary"])))
-    return data, time_now.time()
+    return data, today_dayweek, time_now.time(), gdate
 
 
 def split_evnts(evnts):
@@ -86,6 +91,27 @@ def split_evnts(evnts):
     for evnt in evnts:
         evnts_str += f"{evnt[0]} {evnt[1]}\n"
     return evnts_str
+
+
+def vk_bot():
+    vk_session = vk_api.VkApi(token=VK_TOKEN)
+    vk = vk_session.get_api()
+    longpoll = VkLongPoll(vk_session)
+
+    def sender(id, text):
+        vk.messages.send(user_id=id, message=text, random_id=0)
+
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW:
+            if event.to_me:
+                msg = event.text.lower()
+                id = event.user_id
+                if msg == 'today':
+                    events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
+                    events_str = split_evnts(events_arr)
+                    sender(id, f"Current time: {time_now}\n\n{events_str}")
+                else:
+                    sender(id, 'Ничего не понимаю(')
 
 
 def telegram_bot():
@@ -109,7 +135,7 @@ def telegram_bot():
     @bot.message_handler()
     def send_text(message):
         if message.text.lower() == "today":
-            events_arr, time_now = get_cal_evnts()
+            events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
             events_str = split_evnts(events_arr)
             bot.send_message(
                 message.chat.id,
@@ -124,46 +150,19 @@ def telegram_bot():
 
 @app.route("/")
 def render_cal():
-    yandex_ctime = get_yandex_time()
-    time_now = datetime.strptime(ctime(yandex_ctime / 1000), "%c")
-    gdate = time_now.date()
-    start, end = get_time(time_now, dlt=TZ_DELTA)
-    events = mk_req(start, end)
-    locale.setlocale(locale.LC_ALL, "ru_RU")
-    today_dayweek = datetime.now().strftime("%A")
-    data = []
-    for evnt in events["items"]:
-        if today_dayweek == "вторник" and datetime.now().month != 1:
-            data = [(NOEVENT_MSG)]
-        else:
-            time_str = get_times(evnt["start"]["dateTime"], evnt["end"]["dateTime"])
-            if PRINT_MSG:
-                print(time_str, evnt["summary"])
-            data.append((time_str, beautify(evnt["summary"])))
-    return render_template("daily_with_hidden.html", data=data, today=today_dayweek, tim=time_now.time(), gdat=gdate)
+    data, today_dayweek, time_now, gdate = get_cal_evnts()
+    return render_template("daily_with_hidden.html", data=data,
+                           today=today_dayweek, tim=time_now, gdat=gdate)
 
 
 @app.route("/tomorrow/")
 def render_cal_tomorrow():
     # Yandex ctime increased by one day
-    yandex_ctime = get_yandex_time() + 86400000
-    time_now = datetime.strptime(ctime(yandex_ctime / 1000), "%c")
-    gdate = time_now.date()
-    start, end = get_time(time_now, dlt=TZ_DELTA)
-    events = mk_req(start, end)
-    locale.setlocale(locale.LC_ALL, "ru_RU")
+    data, today_dayweek, time_now, gdate = get_cal_evnts(dt=86400000)
     tomorrow = datetime.now() + timedelta(days=1)
     today_dayweek = tomorrow.strftime("%A")
-    data = []
-    for evnt in events["items"]:
-        if today_dayweek == "вторник" and tomorrow.month != 1:
-            data = [(NOEVENT_MSG)]
-        else:
-            time_str = get_times(evnt["start"]["dateTime"], evnt["end"]["dateTime"])
-            if PRINT_MSG:
-                print(time_str, evnt["summary"])
-            data.append((time_str, beautify(evnt["summary"])))
-    return render_template("daily_with_hidden.html", data=data, today=today_dayweek, tim=time_now.time(), gdat=gdate)
+    return render_template("daily_with_hidden.html", data=data,
+                           today=today_dayweek, tim=time_now, gdat=gdate)
 
 
 @app.route("/hidden/")
@@ -174,5 +173,8 @@ if __name__ == "__main__":
     Gcal = GoogleCalendar()
     if TG_BOT:
         bot_thread = threading.Thread(target=telegram_bot)
+        bot_thread.start()
+    if VK_BOT:
+        bot_thread = threading.Thread(target=vk_bot)
         bot_thread.start()
     app.run(host=HOST, port=PORT)
