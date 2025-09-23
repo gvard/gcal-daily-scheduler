@@ -24,10 +24,10 @@ For the application to work, you need:
 * If necessary, specify the IP address and port in `flask_cal.py`, `HOST` and `PORT` variables.
 * Launch the application from the command line or using a shortcut on the Windows desktop.
 
-Additionally, you can use a Telegram bot for various requests.
+Additionally, you can use a [Telegram](https://telegram.org/) or [VK](https://vk.com/) bot for various requests.
 The bot starts and runs simultaneously with the Flask application.
-To use the bot, specify [your token](https://core.telegram.org/bots/tutorial) in `flask_cal.py`, `TG_TOKEN` variable.
-You can disable the bot by setting the `TG_BOT` variable to False.
+To use the bot, specify [your token](https://core.telegram.org/bots/tutorial) in `flask_cal.py`, `TG_TOKEN` or `VK_TOKEN` variable.
+You can disable the bot by setting the `TG_BOT` or `VK_BOT` variable to False.
 
 More information on how to interact with the Google Calendar API can be found at:
 * [Python quickstart guide](https://developers.google.com/workspace/calendar/api/quickstart/python)
