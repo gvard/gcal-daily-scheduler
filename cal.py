@@ -43,6 +43,7 @@ class GoogleCalendar:
 
 
 CAL_ID = "yourcalendaridhere.calendar.google.com"
+CAL_WRK_ID = "anothercalendaridhere.calendar.google.com"
 
 # Add calendar once
 # Gcal.add_calendar(calendar_id=CAL_ID)

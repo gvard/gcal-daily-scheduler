@@ -9,13 +9,16 @@ import locale
 import json
 import urllib.request
 import threading
+import time
 
 from flask import Flask, render_template
 from telebot import TeleBot, types
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
+from requests.exceptions import ConnectionError, ReadTimeout
+from urllib3.exceptions import ReadTimeoutError, ProtocolError
 
-from cal import GoogleCalendar, CAL_ID, TZ_DELTA
+from cal import GoogleCalendar, CAL_ID, CAL_WRK_ID, TZ_DELTA
 
 
 app = Flask(__name__)
@@ -29,8 +32,8 @@ HOST = "127.0.0.1"
 PORT = 5000
 NOEVENT_MSG = "10:00–20:00", "No events today"
 
-if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
-    getattr(ssl, '_create_unverified_context', None)):
+if (not os.environ.get("PYTHONHTTPSVERIFY", "") and
+    getattr(ssl, "_create_unverified_context", None)):
     ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -106,12 +109,28 @@ def vk_bot():
             if event.to_me:
                 msg = event.text.lower()
                 id = event.user_id
-                if msg == 'today':
+                if msg == "today":
                     events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
                     events_str = split_evnts(events_arr)
                     sender(id, f"Current time: {time_now}\n\n{events_str}")
                 else:
-                    sender(id, 'Ничего не понимаю(')
+                    sender(id, "Ничего не понимаю(")
+
+
+def get_worker_today():
+    workers_str = ""
+    time_now = datetime.now()
+    start = (datetime(
+        time_now.year, time_now.month, time_now.day, time_now.hour, time_now.minute
+        )).isoformat() + "Z"
+    tomorrow = time_now + timedelta(days=1)
+    end = (datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0)).isoformat() + "Z"
+    events = Gcal.service.events().list(
+        calendarId=CAL_WRK_ID, timeMin=start, timeMax=end, singleEvents=True, orderBy="startTime",
+        maxResults=4, timeZone="UTC").execute()
+    for event in events["items"]:
+        workers_str += f"{event['summary'].strip('БЗЗ: ')}, "
+    return workers_str.strip(", ")
 
 
 def telegram_bot():
@@ -120,16 +139,17 @@ def telegram_bot():
     @bot.message_handler(commands=["start"])
     def start_message(message):
         MSG = "\n".join(("Hello and welcome to the daily scheduler bot.",
-                         "Type <i>today</i> to display the daily schedule.",
+                         "Type <i>today</i> to display the daily schedule, <i>who</i> to display who is working today.",
                          ))
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         today = types.KeyboardButton("Today")
-        markup.row(today)
+        working_today = types.KeyboardButton("Who")
+        markup.row(today, working_today)
         bot.send_message(
             message.chat.id,
             MSG,
             reply_markup=markup,
-            parse_mode='HTML',
+            parse_mode="HTML",
             )
 
     @bot.message_handler()
@@ -140,12 +160,22 @@ def telegram_bot():
             bot.send_message(
                 message.chat.id,
                 f"<u>Current time</u>: {time_now}\n\n{events_str}",
-                parse_mode='HTML',
+                parse_mode="HTML",
+            )
+        elif message.text.lower() == "who":
+            bot.send_message(
+                message.chat.id,
+                f"They are working today: {get_worker_today()}"
             )
         else:
             bot.send_message(message.chat.id, "Unknown command")
 
-    bot.polling(none_stop=True)
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=0, timeout=15)
+        except (ConnectionError, ReadTimeout, ProtocolError, ReadTimeoutError) as e:
+            print(f"Connection error occurred: {e}. Retrying in 5 seconds...")
+            time.sleep(5)
 
 
 @app.route("/")
