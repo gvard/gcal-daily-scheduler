@@ -104,17 +104,24 @@ def vk_bot():
     def sender(id, text):
         vk.messages.send(user_id=id, message=text, random_id=0)
 
-    for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW:
-            if event.to_me:
-                msg = event.text.lower()
-                id = event.user_id
-                if msg == "today":
-                    events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
-                    events_str = split_evnts(events_arr)
-                    sender(id, f"Current time: {time_now}\n\n{events_str}")
-                else:
-                    sender(id, "Ничего не понимаю(")
+    while True:
+        try:
+            for event in longpoll.listen():
+                if event.type == VkEventType.MESSAGE_NEW:
+                    if event.to_me:
+                        msg = event.text.lower()
+                        id = event.user_id
+                        if msg == "today":
+                            events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
+                            events_str = split_evnts(events_arr)
+                            sender(id, f"Current time: {time_now}\n\n{events_str}")
+                        elif msg == "who":
+                            sender(id, f"They are working today: {get_worker_today()}")
+                        else:
+                            sender(id, "Ничего не понимаю(")
+        except (ConnectionError, ReadTimeout, ProtocolError, ReadTimeoutError) as e:
+            print(f"Connection error occurred in VK bot: {e}. Retrying in 5 seconds...")
+            time.sleep(5)
 
 
 def get_worker_today():
@@ -202,9 +209,9 @@ def render_hidden():
 if __name__ == "__main__":
     Gcal = GoogleCalendar()
     if TG_BOT:
-        bot_thread = threading.Thread(target=telegram_bot)
-        bot_thread.start()
+        bot_thread1 = threading.Thread(target=telegram_bot)
+        bot_thread1.start()
     if VK_BOT:
-        bot_thread = threading.Thread(target=vk_bot)
-        bot_thread.start()
+        bot_thread2 = threading.Thread(target=vk_bot)
+        bot_thread2.start()
     app.run(host=HOST, port=PORT)
