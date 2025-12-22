@@ -18,7 +18,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from requests.exceptions import ConnectionError, ReadTimeout
 from urllib3.exceptions import ReadTimeoutError, ProtocolError
 
-from cal import GoogleCalendar, CAL_ID, CAL_WRK_ID, TZ_DELTA
+from .cal import GoogleCalendar, CAL_ID, CAL_WRK_ID, TZ_DELTA
 
 
 app = Flask(__name__)
