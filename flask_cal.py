@@ -111,7 +111,9 @@ def vk_bot():
                     if event.to_me:
                         msg = event.text.lower()
                         id = event.user_id
-                        if msg == "today":
+                        if msg in ['привет', 'start', '/start'] or not msg:
+                            sender(id, "Приветствую! По команде today я могу показать расписание, who покажет, кто работает в БЗЗ сегодня.")
+                        elif msg == "today":
                             events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
                             events_str = split_evnts(events_arr)
                             sender(id, f"Current time: {time_now}\n\n{events_str}")

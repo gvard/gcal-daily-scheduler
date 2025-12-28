@@ -10,11 +10,12 @@ Note that the application uses JavaScript code to highlight past and future even
 * [Flask](https://flask.palletsprojects.com/)
 * [Google client library](https://github.com/googleapis/google-api-python-client)
 * [pyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI/)
+* [vk-api](https://pypi.org/project/vk-api/)
 
 ## Installation
 
 ```bash
-pip install --upgrade Flask google-api-python-client google-auth-httplib2 google-auth-oauthlib pyTelegramBotAPI
+pip install --upgrade Flask google-api-python-client google-auth-httplib2 google-auth-oauthlib pyTelegramBotAPI vk-api
 ```
 
 For the application to work, you need:
