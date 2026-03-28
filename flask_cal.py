@@ -18,7 +18,7 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from requests.exceptions import ConnectionError, ReadTimeout
 from urllib3.exceptions import ReadTimeoutError, ProtocolError
 
-from .cal import GoogleCalendar, CAL_ID, CAL_WRK_ID, TZ_DELTA
+from cal import GoogleCalendar, CAL_ID, CAL_WRK_ID, TZ_DELTA
 
 
 app = Flask(__name__)
@@ -31,6 +31,7 @@ PRINT_MSG = False
 HOST = "127.0.0.1"
 PORT = 5000
 NOEVENT_MSG = "10:00–20:00", "No events today"
+LOCALE = "ru_RU"
 
 if (not os.environ.get("PYTHONHTTPSVERIFY", "") and
     getattr(ssl, "_create_unverified_context", None)):
@@ -61,6 +62,15 @@ def get_times(strt, end):
     return "–".join((strt, end))
 
 
+def get_dtimes(strt, end):
+    sdate = strt.split("T")[0].split("-")[2] + "." + strt.split("T")[0].split("-")[1]
+    strt = sdate + " " + strt.split("T")[1][:5]
+    edate = end.split("T")[0].split("-")[2] + "." + end.split("T")[0].split("-")[1]
+    end = edate + " " + end.split("T")[1][:5]
+    times = "–".join((strt, end))
+    return f"<u>{times}</u>"
+
+
 def mk_req(start, end):
     events = Gcal.list_event(CAL_ID, start, end)
     return events
@@ -75,7 +85,7 @@ def get_cal_evnts(dt=0):
     gdate = time_now.date()
     start, end = get_time(time_now, dlt=TZ_DELTA)
     events = mk_req(start, end)
-    locale.setlocale(locale.LC_ALL, "ru_RU")
+    locale.setlocale(locale.LC_ALL, LOCALE)
     today_dayweek = datetime.now().strftime("%A")
     data = []
     for evnt in events["items"]:
@@ -86,6 +96,29 @@ def get_cal_evnts(dt=0):
             if PRINT_MSG:
                 print(time_str, evnt["summary"])
             data.append((time_str, beautify(evnt["summary"])))
+    return data, today_dayweek, time_now.time(), gdate
+
+
+def get_weekly_evnts(dt=0):
+    yandex_ctime = get_yandex_time() + dt
+    time_now = datetime.strptime(ctime(yandex_ctime / 1000), "%c")
+    gdate = time_now.date()
+    start = (datetime(
+        time_now.year, time_now.month, time_now.day, 7-TZ_DELTA, 59,
+        )).isoformat() + "Z"
+    nextweek = time_now + timedelta(days=7)
+    end = (datetime(nextweek.year, nextweek.month, nextweek.day, 23-TZ_DELTA, 1)).isoformat() + "Z"
+    events = Gcal.service.events().list(
+        calendarId=CAL_ID, timeMin=start, timeMax=end, singleEvents=True, orderBy="startTime",
+        maxResults=14).execute()
+    locale.setlocale(locale.LC_ALL, LOCALE)
+    today_dayweek = datetime.now().strftime("%A")
+    data = []
+    for evnt in events["items"]:
+        time_str = get_dtimes(evnt["start"]["dateTime"], evnt["end"]["dateTime"])
+        if PRINT_MSG:
+            print(time_str, evnt["summary"])
+        data.append((time_str, beautify(evnt["summary"])))
     return data, today_dayweek, time_now.time(), gdate
 
 
@@ -116,9 +149,9 @@ def vk_bot():
                         elif msg == "today":
                             events_arr, today_dayweek, time_now, gdate = get_cal_evnts()
                             events_str = split_evnts(events_arr)
-                            sender(id, f"Current time: {time_now}\n\n{events_str}")
+                            sender(id, f"Current time: {time_now}, {today_dayweek} {gdate}\n\n{events_str}")
                         elif msg == "who":
-                            sender(id, f"They are working today: {get_worker_today()}")
+                            sender(id, f"They are working today:\n{get_worker_today().strip(',\n')}")
                         else:
                             sender(id, "Ничего не понимаю(")
         except (ConnectionError, ReadTimeout, ProtocolError, ReadTimeoutError) as e:
@@ -138,7 +171,7 @@ def get_worker_today():
         calendarId=CAL_WRK_ID, timeMin=start, timeMax=end, singleEvents=True, orderBy="startTime",
         maxResults=4, timeZone="UTC").execute()
     for event in events["items"]:
-        workers_str += f"{event['summary'].strip('БЗЗ: ')}, "
+        workers_str += f"{event['summary'].strip('БЗЗ: ')},\n"
     return workers_str.strip(", ")
 
 
@@ -168,13 +201,21 @@ def telegram_bot():
             events_str = split_evnts(events_arr)
             bot.send_message(
                 message.chat.id,
-                f"<u>Current time</u>: {time_now}\n\n{events_str}",
+                f"Current time: {time_now}, {today_dayweek} {gdate}\n\n{events_str}",
+                parse_mode="HTML",
+            )
+        elif message.text.lower() == "gimme week":
+            events_arr, today_dayweek, time_now, gdate = get_weekly_evnts()
+            events_str = split_evnts(events_arr)
+            bot.send_message(
+                message.chat.id,
+                f"Current time: {time_now}, {today_dayweek} {gdate}\n\n{events_str}",
                 parse_mode="HTML",
             )
         elif message.text.lower() == "who":
             bot.send_message(
                 message.chat.id,
-                f"They are working today: {get_worker_today()}"
+                f"They are working today:\n{get_worker_today().strip(',\n')}"
             )
         else:
             bot.send_message(message.chat.id, "Unknown command")
@@ -216,4 +257,5 @@ if __name__ == "__main__":
     if VK_BOT:
         bot_thread2 = threading.Thread(target=vk_bot)
         bot_thread2.start()
-    app.run(host=HOST, port=PORT)
+    from waitress import serve
+    serve(app, host=HOST, port=PORT)

@@ -1,7 +1,7 @@
-# gcal-daily-scheduler
-Daily schedule with Google Calendar, visualized using Flask
+# A set of tools for retrieving and visualizing schedule events
+Daily/weekly schedule with Google Calendar or [Yandex Calendar](https://calendar.yandex.ru/), visualized using Flask
 
-This python application is designed to work with the [E&S Digistar](https://en.wikipedia.org/wiki/Digistar) interface, but can be easily used independently.
+The python application is originally designed to work with the [E&S Digistar](https://en.wikipedia.org/wiki/Digistar) interface, but can be easily used independently.
 
 Note that the application uses JavaScript code to highlight past and future events (and for something else), so support for JS is desirable.
 
@@ -9,6 +9,13 @@ Note that the application uses JavaScript code to highlight past and future even
 
 * [Flask](https://flask.palletsprojects.com/)
 * [Google client library](https://github.com/googleapis/google-api-python-client)
+* [Waitress](https://pypi.org/project/waitress/) or other WSGI server
+
+### For Yandex Calendar
+* [CalDAV](https://pypi.org/project/caldav/)
+* [vobject](https://pypi.org/project/vobject/)
+
+### For Telegram or VK bot
 * [pyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI/)
 * [vk-api](https://pypi.org/project/vk-api/)
 
